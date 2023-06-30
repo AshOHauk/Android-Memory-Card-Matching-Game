@@ -1,10 +1,9 @@
 package com.sa4108.draftca;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.view.MotionEvent;
+import android.util.LruCache;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
@@ -15,19 +14,12 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 
 public class MainActivity extends AppCompatActivity{
@@ -36,15 +28,12 @@ public class MainActivity extends AppCompatActivity{
     public final ExecutorService executorService = Executors.newSingleThreadExecutor();
     //ExecutorService provides a simple way to launch new threads, and manage concurrent tasks
     //In this case, a single-thread executor is created, it processes one task at a time (FIFO)
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    //Handler object acts as channel to post tasks and messages back to a thread.
-    //In this case, it is back to the Main Thread for UI updates
-    private final ArrayList<String> imageList = new ArrayList<>();
-    private ProgressBar progressBar;
+    public final ArrayList<String> imageList = new ArrayList<>();
+    public ProgressBar progressBar;
     private TextView progressText;
-    private int counter=0;
-
-    private Future<?> futureTask = null;
+    public final Map<String, Future> futuresMap = new ConcurrentHashMap<>();
+    private LruCache<String, Bitmap> cache = CacheManager.getInstance().getCache();
+    private ArrayList<String> selectedImages = new ArrayList<>();
 
 
     @Override
@@ -53,7 +42,7 @@ public class MainActivity extends AppCompatActivity{
         setContentView(R.layout.activity_main);
 
         final EditText urlEditText = findViewById(R.id.urlEditText);
-        CustomListAdapter customListAdapter = new CustomListAdapter(this, imageList,this);
+        CustomListAdapter customListAdapter = new CustomListAdapter(this,imageList);
         GridView gv = findViewById(R.id.imageGridView);
         if(gv!=null) {
             gv.setAdapter(customListAdapter);
@@ -63,95 +52,77 @@ public class MainActivity extends AppCompatActivity{
         progressText = findViewById(R.id.progressText);
 
         findViewById(R.id.fetchButton).setOnClickListener(v -> {
-            if (futureTask != null && !futureTask.isDone()) {
-                futureTask.cancel(true);  // attempt to interrupt if task is running
+            String newUrl = String.valueOf(urlEditText.getText());
+            Future previousTask = futuresMap.get(newUrl);
+            if(previousTask != null && !previousTask.isDone()){
+                previousTask.cancel(true);
             }
-            counter=0;
+            progressText.setVisibility(View.GONE);
+            progressBar.setProgress(0);
             imageList.clear();
-            customListAdapter.imageCache.evictAll();
-            url = urlEditText.getText().toString();
-
-
-            downloadImages();
+            cache.evictAll();
+            selectedImages.clear();
+            ImageDownloadTask task = new ImageDownloadTask(newUrl,this);
+            Future futureTask = executorService.submit(task);
+            futuresMap.put(newUrl, futureTask);
             // Hide the keyboard
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
         });
 
-        findViewById(R.id.imageGridView).setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                // Hide the keyboard
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
-                return true;
-            }
-        });
+//        findViewById(R.id.imageGridView).setOnTouchListener(new View.OnTouchListener() {
+//            @Override
+//            public boolean onTouch(View v, MotionEvent event) {
+//                // Hide the keyboard
+//                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+//                imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+//                return true;
+//            }
+//        });
 
         gv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
+                // Get the selected image from the adapter
+                String selectedImage = imageList.get(position);
+
                 // TODO: Handle selection of images, keep count until six are chosen
+
+                // Toggle the selection status of the clicked image
+                boolean isSelected = toggleImageSelection(selectedImage);
+
+                // Update the UI based on the selection status
+                if (isSelected) {
+                    // Apply an outline or any other visual indication to the selected image
+                    v.setBackgroundResource(R.drawable.selected_overlay);
+                } else {
+                    // Remove the outline or any visual indication from the unselected image
+                    v.setBackground(null);
+                }
             }
         });
     }
 
-    private void downloadImages() {
-        futureTask = executorService.submit(() -> { // Background process
-            try{
-                //Load the web page content
-                URL url = new URL(this.url);
-                URLConnection connection = url.openConnection();
-                connection.setRequestProperty("User-Agent",
-                        "Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.2.28) Gecko/20120306 Firefox/3.6.28");
-                HttpURLConnection httpConnection = (HttpURLConnection) connection;
-                int responseCode = httpConnection.getResponseCode();
-                if(responseCode!=200){
-                    throw new Exception("Non-200 HTTP Response received: " + responseCode);
-                }
-                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                String line;
-                StringBuilder htmlContent = new StringBuilder();
-                while ((line = reader.readLine()) != null) {
-                    htmlContent.append(line);
-                }
-                reader.close();
-                //Extract the image URLs
-                Pattern pattern = Pattern.compile("<img[^>]+src\\s*=\\s*['\"](https?://[^'\"]+(?:\\.jpeg|\\.png|\\.jpg|\\.gif|\\.JPEG|\\.PNG|\\.JPG|\\.GIF))['\"][^>]*>");
-                Matcher matcher = pattern.matcher(htmlContent.toString());
-                while (matcher.find() && imageList.size() < maxNumberOfImages) {
-                    String imageUrl = matcher.group(1);
-                    imageList.add(imageUrl);
-                }
-                progressBar.setProgress(0);
-                progressBar.setMax(imageList.size());
+    private boolean toggleImageSelection(String image) {
+        boolean isSelected = selectedImages.contains(image);
 
-                handler.post(() -> { // Final UI operations on main thread
-                    //Refresh the view
-                    //.getAdapter returns an Adapter Object which is a superclass.
-                    //Down casting it to CustomListAdapter gives us access to the method notifyDataSetChanged()
-                    //This method asks the adapter to redraw the view
-                    ((CustomListAdapter)((GridView)findViewById(R.id.imageGridView)).getAdapter()).notifyDataSetChanged();
-                });
-            }catch(IOException eio){
-                eio.printStackTrace();
-                //TODO handle gracefully
-                progressText.setText("File not found. Please check that the URL is valid");
-            }catch(Exception e){
-                e.printStackTrace();
-                //TODO handle gracefully
-                progressText.setText("Error");
-            }
-        });
+        if (isSelected) {
+            // Image is already selected, so remove it from the list
+            selectedImages.remove(image);
+        } else {
+            // Image is not selected, so add it to the list
+            selectedImages.add(image);
+        }
+
+        return !isSelected; // Return the updated selection status
     }
-    void updateProgressText(){
-        runOnUiThread(()->{
-            counter++;
-            progressBar.setProgress(counter);
-            progressText.setText(String.format(Locale.UK,"Downloaded %d of %d images...", counter ,imageList.size()));
-            if (counter==imageList.size()){
-                progressText.setText("Images downloaded");
-            }
+
+    void updateGridView(String message) {
+        runOnUiThread(() -> {
+            ((CustomListAdapter)((GridView)findViewById(R.id.imageGridView)).getAdapter()).notifyDataSetChanged();
+            progressText.setVisibility(View.VISIBLE);
+            progressText.setText(message);
         });
+
     }
 
 }
