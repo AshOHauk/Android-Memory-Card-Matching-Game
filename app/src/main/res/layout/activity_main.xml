@@ -27,12 +27,24 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
+    <GridView
+        android:id="@+id/imageGridView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:numColumns="4"
+        app:layout_constraintTop_toBottomOf="@id/fetchButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/progressBar"/>
+
     <ProgressBar
         android:id="@+id/progressBar"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/fetchButton"
+        android:layout_height="0dp"
+        app:layout_constraintHeight_percent="0.05"
+        app:layout_constraintBottom_toTopOf="@id/progressText"
+        app:layout_constraintTop_toBottomOf="@id/imageGridView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:indeterminate="false"/>
@@ -40,23 +52,14 @@
     <TextView
         android:id="@+id/progressText"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="Downloading Images..."
-        android:textSize="16sp"
-        android:gravity="center"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/progressBar"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-
-    <GridView
-        android:id="@+id/imageGridView"
-        android:layout_width="0dp"
         android:layout_height="0dp"
-        android:numColumns="4"
-        app:layout_constraintTop_toBottomOf="@id/progressText"
-        app:layout_constraintStart_toStartOf="parent"
+        android:gravity="top|center_horizontal"
+        android:text=""
+        android:textSize="16sp"
+        android:visibility="visible"
+        app:layout_constraintHeight_percent="0.05"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"/>
-
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/progressBar" />
 </androidx.constraintlayout.widget.ConstraintLayout>

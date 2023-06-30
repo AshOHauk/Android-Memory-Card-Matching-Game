@@ -1,9 +1,12 @@
 package com.sa4108.draftca;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.GridView;
@@ -22,14 +25,15 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
 public class MainActivity extends AppCompatActivity{
     String url;
-    private final int maxNumberOfImages = 40;
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private final int maxNumberOfImages = 20;
+    public final ExecutorService executorService = Executors.newSingleThreadExecutor();
     //ExecutorService provides a simple way to launch new threads, and manage concurrent tasks
     //In this case, a single-thread executor is created, it processes one task at a time (FIFO)
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -38,6 +42,10 @@ public class MainActivity extends AppCompatActivity{
     private final ArrayList<String> imageList = new ArrayList<>();
     private ProgressBar progressBar;
     private TextView progressText;
+    private int counter=0;
+
+    private Future<?> futureTask = null;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
@@ -45,25 +53,40 @@ public class MainActivity extends AppCompatActivity{
         setContentView(R.layout.activity_main);
 
         final EditText urlEditText = findViewById(R.id.urlEditText);
-        CustomListAdapter customListAdapter = new CustomListAdapter(this, imageList);
+        CustomListAdapter customListAdapter = new CustomListAdapter(this, imageList,this);
         GridView gv = findViewById(R.id.imageGridView);
         if(gv!=null) {
             gv.setAdapter(customListAdapter);
         }
 
         progressBar = findViewById(R.id.progressBar);
-        progressBar.setMax(maxNumberOfImages);  //
         progressText = findViewById(R.id.progressText);
 
         findViewById(R.id.fetchButton).setOnClickListener(v -> {
-            url = urlEditText.getText().toString();
+            if (futureTask != null && !futureTask.isDone()) {
+                futureTask.cancel(true);  // attempt to interrupt if task is running
+            }
+            counter=0;
             imageList.clear();
-            progressBar.setProgress(0);
-            progressBar.setVisibility(View.VISIBLE);
-            progressText.setVisibility(View.VISIBLE);
+            customListAdapter.imageCache.evictAll();
+            url = urlEditText.getText().toString();
+
+
             downloadImages();
+            // Hide the keyboard
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
         });
 
+        findViewById(R.id.imageGridView).setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                // Hide the keyboard
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                return true;
+            }
+        });
 
         gv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
@@ -73,7 +96,7 @@ public class MainActivity extends AppCompatActivity{
     }
 
     private void downloadImages() {
-        executorService.execute(() -> { // Background process
+        futureTask = executorService.submit(() -> { // Background process
             try{
                 //Load the web page content
                 URL url = new URL(this.url);
@@ -98,18 +121,11 @@ public class MainActivity extends AppCompatActivity{
                 while (matcher.find() && imageList.size() < maxNumberOfImages) {
                     String imageUrl = matcher.group(1);
                     imageList.add(imageUrl);
-                    try{
-                        Thread.sleep(50); //TODO remove after testing
-                    }catch(Exception e_sleep){}
-                    handler.post(() -> { // post to main thread to update UI
-                        progressBar.setProgress(imageList.size());
-                        progressText.setText(String.format(Locale.UK,"Downloading %d of %d images...", imageList.size(),maxNumberOfImages));
-                    });
                 }
+                progressBar.setProgress(0);
+                progressBar.setMax(imageList.size());
 
                 handler.post(() -> { // Final UI operations on main thread
-                    progressBar.setVisibility(View.GONE);
-                    progressText.setVisibility(View.GONE);
                     //Refresh the view
                     //.getAdapter returns an Adapter Object which is a superclass.
                     //Down casting it to CustomListAdapter gives us access to the method notifyDataSetChanged()
@@ -127,4 +143,15 @@ public class MainActivity extends AppCompatActivity{
             }
         });
     }
+    void updateProgressText(){
+        runOnUiThread(()->{
+            counter++;
+            progressBar.setProgress(counter);
+            progressText.setText(String.format(Locale.UK,"Downloaded %d of %d images...", counter ,imageList.size()));
+            if (counter==imageList.size()){
+                progressText.setText("Images downloaded");
+            }
+        });
+    }
+
 }
