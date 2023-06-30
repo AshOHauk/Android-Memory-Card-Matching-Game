@@ -16,22 +16,18 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ImageDownloadTask implements Runnable{
-    private String newUrl;
-    private MainActivity mainActivity;
-//    private final ArrayList<String> imageList = new ArrayList<>();
-    private final int maxNumberOfImages = 20;
-    private LruCache<String, Bitmap> cache = CacheManager.getInstance().getCache();
-    private int counter=0;
-
+    private final String newUrl;
+    private final MainActivity mainActivity;
+    private final LruCache<String, Bitmap> cache = CacheManager.getInstance().getCache();
     public ImageDownloadTask(String newUrl, MainActivity mainActivity) {
         this.newUrl = newUrl;
         this.mainActivity = mainActivity;
     }
-
+    //Main Logic for downloading images
     @Override
     public void run() {
         try {
-            counter=0;
+            int counter = 0;
             //Step 1: Load the web page content
             URL url = new URL(this.newUrl);
             URLConnection connection = url.openConnection();
@@ -55,8 +51,11 @@ public class ImageDownloadTask implements Runnable{
             }
             reader.close();
             //Step 2: Extract the imageURLS
+            //searches for <img> tags with src attributes containing image file extensions like .jpeg, .png, .jpg, .gif
             Pattern pattern = Pattern.compile("<img[^>]+src\\s*=\\s*['\"](https?://[^'\"]+(?:\\.jpeg|\\.png|\\.jpg|\\.gif|\\.JPEG|\\.PNG|\\.JPG|\\.GIF))['\"][^>]*>");
             Matcher matcher = pattern.matcher(htmlContent.toString());
+            //    private final ArrayList<String> imageList = new ArrayList<>();
+            int maxNumberOfImages = 20;
             while(matcher.find() && mainActivity.imageList.size() < maxNumberOfImages) {
                 if (Thread.currentThread().isInterrupted()) {
                     return;  // Thread has been interrupted, stop the task.
@@ -86,20 +85,21 @@ public class ImageDownloadTask implements Runnable{
                 input.close();
                 httpImgURLConnection.disconnect();
                 counter++;
-                String message = String.format(Locale.UK,"Downloaded %d of %d images", counter ,mainActivity.imageList.size());
+                String message = String.format(Locale.UK,"Downloaded %d of %d images", counter,mainActivity.imageList.size());
                 mainActivity.updateGridView(message);
             }
             // Download complete, remove task from futuresMap
-            mainActivity.futuresMap.remove(url);
+            mainActivity.futuresMap.remove(url.toString());
         } catch(IOException eio) {
-            System.out.println(eio);
+            eio.printStackTrace();
             // Handle exception
             mainActivity.updateGridView("No Images available. Please try another URL");
         } catch(Exception e) {
-            System.out.println(e);
+            e.printStackTrace();
             // Handle exception
         }
     }
+    //Resize bitmap while maintaining aspect ratio. To reduce memory usage if bitmap is especially large
     private Bitmap resizeBitmap(Bitmap source) {
         int desiredSize = (int) (100 * mainActivity.getResources().getDisplayMetrics().density);
         int width = source.getWidth();

@@ -13,34 +13,29 @@ import android.widget.ImageView;
 import java.util.ArrayList;
 
 public class CustomListAdapter extends ArrayAdapter<String> {
-    // Error image resource ID
-    private static final int ERROR_IMAGE_RES = R.drawable.ic_launcher_foreground;  // replace with error image resource
-
-    private LruCache<String, Bitmap> cache = CacheManager.getInstance().getCache();
-    private ArrayList<String> imageList;
+    private static final int PLACEHOLDER_IMAGE_RES = R.drawable.ic_launcher_foreground;
+    private final LruCache<String, Bitmap> cache = CacheManager.getInstance().getCache();
+    private final ArrayList<String> imageList;
 
     CustomListAdapter(Context context,ArrayList<String> imageList) {
         super(context, R.layout.grid_item,imageList);
         this.imageList = imageList;
     }
-
     @Override
     public View getView(int position, View convertView, @NonNull ViewGroup parent) {
         if (convertView == null) {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.grid_item, parent, false);
         }
         ImageView imageView = convertView.findViewById(R.id.gridImageItem);
-        imageView.setImageResource(ERROR_IMAGE_RES);
+        imageView.setImageResource(PLACEHOLDER_IMAGE_RES);
 
         String imageUrl = imageList.get(position);
         Bitmap bitmap = cache.get(imageUrl);
         if (bitmap != null) {
-            // Display the cached Bitmap in the ImageView
             imageView.setImageBitmap(bitmap);
         } else {
-            imageView.setImageResource(ERROR_IMAGE_RES);
+            imageView.setImageResource(PLACEHOLDER_IMAGE_RES);
         }
-
         return convertView;
     }
 }
