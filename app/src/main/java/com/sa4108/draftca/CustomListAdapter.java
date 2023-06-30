@@ -6,6 +6,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+
+import androidx.annotation.NonNull;
+
 import com.squareup.picasso.Picasso;
 import java.util.ArrayList;
 
@@ -16,9 +19,10 @@ public class CustomListAdapter extends ArrayAdapter<String> {
     }
 
     @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
+    public View getView(int position, View convertView, @NonNull ViewGroup parent) {
         if (convertView == null) {
             //Inflate a new view from its layout file, if one has not been created previously to recycle
+            //using LayoutInflater.from() is a convenience method that calls getContext().getSystemService(Activity.LAYOUT_INFLATER_SERVICE)
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.grid_item, parent, false);
         }
 

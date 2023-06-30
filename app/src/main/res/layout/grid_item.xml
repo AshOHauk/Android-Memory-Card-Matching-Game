@@ -11,8 +11,6 @@
         android:layout_width="100dp"
         android:layout_height="100dp"
         android:layout_gravity="center_horizontal"
-        android:scaleType="fitCenter"/>
-<!--        android:contentDescription="@string/desc_grid_item_img"-->
-<!--        tools:src="@tools:sample/avatars" />-->
-
+        android:scaleType="centerCrop"
+        />
 </LinearLayout>
