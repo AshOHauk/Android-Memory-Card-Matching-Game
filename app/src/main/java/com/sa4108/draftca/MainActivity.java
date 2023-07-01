@@ -79,11 +79,10 @@ public class MainActivity extends AppCompatActivity{
             }
             String newUrl = String.valueOf(urlEditText.getText());
             //reset
-            progressText.setText("Retrieving...");
-            progressBar.setProgress(0);
-            imageList.clear();
-            cache.evictAll();
             selectedImages.clear();
+            cache.evictAll();
+            progressText.setText("Retrieving...");
+
             //Queue new Task with newUrl input
             ImageDownloadTask task = new ImageDownloadTask(newUrl,this);
             Future<?> futureTask = executorService.submit(task);
@@ -112,11 +111,16 @@ public class MainActivity extends AppCompatActivity{
         return !isSelected; // Return the updated selection status
     }
     //Render Image GridView, triggered by ImageDownloadTask per downloaded image
-    void updateGridView(String message) {
+    public void updateGridView(String message) {
         runOnUiThread(() -> {
             ((CustomListAdapter)((GridView)findViewById(R.id.imageGridView)).getAdapter()).notifyDataSetChanged();
             progressText.setVisibility(View.VISIBLE);
             progressText.setText(message);
         });
+    }
+    public void interruptCleanUp(){
+        progressBar.setProgress(0);
+        imageList.clear();
+        updateGridView("Previous query stopped");
     }
 }

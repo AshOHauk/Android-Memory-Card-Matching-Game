@@ -45,6 +45,7 @@ public class ImageDownloadTask implements Runnable{
                 if(Thread.currentThread().isInterrupted()) {
                     httpConnection.disconnect();
                     reader.close();
+                    mainActivity.interruptCleanUp();
                     return;  // Thread has been interrupted, stop the task.
                 }
                 htmlContent.append(line);
@@ -58,15 +59,21 @@ public class ImageDownloadTask implements Runnable{
             int maxNumberOfImages = 20;
             while(matcher.find() && mainActivity.imageList.size() < maxNumberOfImages) {
                 if (Thread.currentThread().isInterrupted()) {
+                    mainActivity.interruptCleanUp();
                     return;  // Thread has been interrupted, stop the task.
                 }
                 String imageUrlString = matcher.group(1);
                 mainActivity.imageList.add(imageUrlString);
             }
             //Step3: Download images
+            if(mainActivity.imageList.size()==0){
+                mainActivity.updateGridView("URL has no images. Please try a different URL");
+                return;
+            }
             mainActivity.progressBar.setMax(mainActivity.imageList.size());
             for(String imageUrlString : mainActivity.imageList){
                 if (Thread.currentThread().isInterrupted()) {
+                    mainActivity.interruptCleanUp();
                     return;  // Thread has been interrupted, stop the task.
                 }
                 URL imageUrl = new URL(imageUrlString);
