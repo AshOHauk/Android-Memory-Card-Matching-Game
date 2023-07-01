@@ -1,6 +1,7 @@
 package com.sa4108.draftca;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.util.LruCache;
@@ -56,7 +57,14 @@ public class MainActivity extends AppCompatActivity{
                 }
 
                 if (selectedImages.size() == 6) {
-                    // TODO: Start next Activity with the selected 6 images
+                    Map<String, Bitmap> mapSnapshot = cache.snapshot();
+                    for (String url : mapSnapshot.keySet()){
+                        if (!selectedImages.contains(url)) {
+                            cache.remove(url);
+                        }
+                    }
+                    Intent intent = new Intent(this, MemoryGameActivity.class);
+                    startActivity(intent);
                 }
             });
         }
