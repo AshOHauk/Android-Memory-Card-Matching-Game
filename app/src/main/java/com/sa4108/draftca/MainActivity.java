@@ -81,6 +81,7 @@ public class MainActivity extends AppCompatActivity{
             //reset
             selectedImages.clear();
             cache.evictAll();
+            imageList.clear();
             progressText.setText("Retrieving...");
 
             //Queue new Task with newUrl input
