@@ -1,45 +1,84 @@
 package com.sa4108.draftca;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.util.LruCache;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.BaseAdapter;
-import android.widget.GridView;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 
-public class CardImageAdapter extends BaseAdapter {
-    private Context context;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Map;
 
-    public CardImageAdapter(Context c) {
-        context = c;
+public class CardImageAdapter extends ArrayAdapter {
+    private final LruCache<String, Bitmap> cache = CacheManager.getInstance().getCache();
+    private ArrayList<ImageItem> gameImages;
+    private boolean[] revealed;
+    public CardImageAdapter(Context context) {
+        super(context, R.layout.grid_item);
+        gameImages = generateImages();
+        revealed = new boolean[gameImages.size()];
     }
-
+    @Override
     public int getCount() {
-        return 12; // 12 cards
+        return gameImages.size();
+    }
+    public void revealImage(int position) {
+        revealed[position] = true;
+        notifyDataSetChanged();
     }
 
-    public Object getItem(int position) {
-        // TODO: Return image at the specific position
-        return null;
+    public void unrevealImage(int position) {
+        revealed[position] = false;
+        notifyDataSetChanged();
     }
 
-    public long getItemId(int position) {
-        return 0;
+    public ImageItem getImageItem(int position) {
+        return gameImages.get(position);
+    }
+    public boolean isImageRevealed(int position) {
+        return revealed[position];
     }
 
     public View getView(int position, View convertView, ViewGroup parent) {
-        ImageView imageView;
-
         if (convertView == null) {
-            imageView = new ImageView(context);
+            convertView = LayoutInflater.from(getContext()).inflate(R.layout.grid_item, parent, false);
+        }
+        ImageView imageView = convertView.findViewById(R.id.gridImageItem);
+        // Get the ImageItem object from gameImages based on position
+        ImageItem imageItem = gameImages.get(position);
+        // Set the image bitmap
+        Bitmap image = imageItem.getBitmap();
+        // Set the tag number
+        int tagNumber = imageItem.getTagNumber();
+        imageView.setTag(tagNumber);
+
+        if (revealed[position]) {
+            imageView.setImageBitmap(image);
         } else {
-            imageView = (ImageView) convertView;
+            // Set a common card back as the image
+            imageView.setImageResource(R.drawable.card_back);
         }
 
-        // Set image resource
-        //TODO: imageView.setImageResource(...);
-        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        imageView.setLayoutParams(new GridView.LayoutParams(85, 85)); // Set the size of the imageview
-        return imageView;
+        return convertView;
+    }
+
+    private ArrayList<ImageItem> generateImages(){
+        ArrayList<ImageItem> imageItemList = new ArrayList<>();
+        Map<String, Bitmap> cacheSnapshot = cache.snapshot();
+        int tagNumber=1;
+        for (Map.Entry<String, Bitmap> entry : cacheSnapshot.entrySet()) {
+            Bitmap bitmap = entry.getValue();
+            // Add each image from cache two times
+            imageItemList.add(new ImageItem(bitmap, tagNumber));
+            imageItemList.add(new ImageItem(bitmap, tagNumber));
+            tagNumber++;
+        }
+        // Shuffle the list
+        Collections.shuffle(imageItemList);
+        return imageItemList;
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.LruCache;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -23,6 +24,7 @@ import java.util.concurrent.Future;
 
 
 public class MainActivity extends AppCompatActivity{
+    private final Handler handler = new Handler();
     public final ExecutorService executorService = Executors.newSingleThreadExecutor();
     //ExecutorService provides a simple way to launch new threads, and manage concurrent tasks
     //In this case, a single-thread executor is created, it processes one task at a time (FIFO)
@@ -65,6 +67,7 @@ public class MainActivity extends AppCompatActivity{
                     }
                     Intent intent = new Intent(this, MemoryGameActivity.class);
                     startActivity(intent);
+                    this.finish();
                 }
             });
         }
@@ -101,19 +104,19 @@ public class MainActivity extends AppCompatActivity{
     }
 
     private boolean toggleImageSelection(String image) {
-        boolean isSelected = selectedImages.contains(image);
-        if (isSelected) {
+        if (selectedImages.contains(image)) {
             // Image is already selected, so remove it from the list
-            selectedImages.remove(image);
+            selectedImages.remove(image); // Not selected anymore
+            return false;
         } else {
             // Image is not selected, so add it to the list
-            selectedImages.add(image);
+            selectedImages.add(image); // Selected now
+            return true;
         }
-        return !isSelected; // Return the updated selection status
     }
     //Render Image GridView, triggered by ImageDownloadTask per downloaded image
     public void updateGridView(String message) {
-        runOnUiThread(() -> {
+        handler.post(() -> {
             ((CustomListAdapter)((GridView)findViewById(R.id.imageGridView)).getAdapter()).notifyDataSetChanged();
             progressText.setVisibility(View.VISIBLE);
             progressText.setText(message);
