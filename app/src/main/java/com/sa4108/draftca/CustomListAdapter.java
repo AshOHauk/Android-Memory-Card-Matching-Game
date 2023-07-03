@@ -15,7 +15,7 @@ import java.util.ArrayList;
 
 public class CustomListAdapter extends ArrayAdapter<String> {
     private static final int PLACEHOLDER_IMAGE_RES = R.drawable.ic_launcher_foreground;
-    private final LruCache<String, Bitmap> cache = CacheManager.getInstance().getCache();
+    private final LruCache<String, Bitmap> cache = CacheManager.getInstance().getImageCache();
     private final ArrayList<String> imageList;
 
     CustomListAdapter(Context context,ArrayList<String> imageList) {
@@ -34,8 +34,6 @@ public class CustomListAdapter extends ArrayAdapter<String> {
         Bitmap bitmap = cache.get(imageUrl);
         if (bitmap != null) {
             imageView.setImageBitmap(bitmap);
-        } else {
-            imageView.setImageResource(PLACEHOLDER_IMAGE_RES);
         }
         return convertView;
     }

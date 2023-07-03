@@ -6,7 +6,6 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.LruCache;
-import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.GridView;
@@ -16,6 +15,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -23,19 +23,20 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 
-public class MainActivity extends AppCompatActivity{
+public class MainActivity extends AppCompatActivity implements ImageDownloadCallback{
     private final Handler handler = new Handler();
-    public final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     //ExecutorService provides a simple way to launch new threads, and manage concurrent tasks
     //In this case, a single-thread executor is created, it processes one task at a time (FIFO)
-    public final ArrayList<String> imageList = new ArrayList<>();
+    private final ArrayList<String> imageList = new ArrayList<>();
     //List of imageUrls scraped from website
-    public ProgressBar progressBar;
+    private ProgressBar progressBar;
     private TextView progressText;
-    public final Map<String, Future<?>> futuresMap = new ConcurrentHashMap<>();
+    private final Map<String, Future<?>> futuresMap = new ConcurrentHashMap<>();
     //Keep track of tasks
-    private final LruCache<String, Bitmap> cache = CacheManager.getInstance().getCache();
+    private final LruCache<String, Bitmap> imageCache = CacheManager.getInstance().getImageCache();
     private final ArrayList<String> selectedImages = new ArrayList<>();
+    private GridView gv;
 
 
     @Override
@@ -45,7 +46,7 @@ public class MainActivity extends AppCompatActivity{
         final EditText urlEditText = findViewById(R.id.urlEditText);
 
         CustomListAdapter customListAdapter = new CustomListAdapter(this,imageList);
-        GridView gv = findViewById(R.id.imageGridView);
+        gv = findViewById(R.id.imageGridView);
         if(gv!=null) {
             gv.setAdapter(customListAdapter);
             gv.setOnItemClickListener((parent, v, position, id) -> {
@@ -59,10 +60,10 @@ public class MainActivity extends AppCompatActivity{
                 }
 
                 if (selectedImages.size() == 6) {
-                    Map<String, Bitmap> mapSnapshot = cache.snapshot();
+                    Map<String, Bitmap> mapSnapshot = imageCache.snapshot();
                     for (String url : mapSnapshot.keySet()){
                         if (!selectedImages.contains(url)) {
-                            cache.remove(url);
+                            imageCache.remove(url);
                         }
                     }
                     Intent intent = new Intent(this, MemoryGameActivity.class);
@@ -83,12 +84,15 @@ public class MainActivity extends AppCompatActivity{
             String newUrl = String.valueOf(urlEditText.getText());
             //reset
             selectedImages.clear();
-            cache.evictAll();
-            imageList.clear();
             progressText.setText("Retrieving...");
+            // Clear overlays for all items
+            for (int i = 0; i < gv.getChildCount(); i++) {
+                gv.getChildAt(i).setBackground(null);
+            }
+
 
             //Queue new Task with newUrl input
-            ImageDownloadTask task = new ImageDownloadTask(newUrl,this);
+            ImageDownloadTask task = new ImageDownloadTask(newUrl,this,this);
             Future<?> futureTask = executorService.submit(task);
             //Register the Task for future interruption if triggered
             futuresMap.put(newUrl, futureTask);
@@ -97,9 +101,9 @@ public class MainActivity extends AppCompatActivity{
             imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
         });
     }
-
     protected void onDestroy(){
         super.onDestroy();
+        imageCache.evictAll();
         executorService.shutdown();
     }
 
@@ -114,17 +118,50 @@ public class MainActivity extends AppCompatActivity{
             return true;
         }
     }
-    //Render Image GridView, triggered by ImageDownloadTask per downloaded image
-    public void updateGridView(String message) {
+    @Override
+    public void onUrlRetrievalComplete(ArrayList<String> ImageUrlList){
+        this.imageList.clear();
+        progressBar.setMax(ImageUrlList.size());
+        imageList.addAll(ImageUrlList);
         handler.post(() -> {
             ((CustomListAdapter)((GridView)findViewById(R.id.imageGridView)).getAdapter()).notifyDataSetChanged();
-            progressText.setVisibility(View.VISIBLE);
+            progressText.setText(String.format(Locale.UK,"Retrieved %d image URLs..downloading..",ImageUrlList.size()));
+        });
+    }
+
+    @Override
+    public void onEachImageDownloadComplete(int downloaded, int total) {
+        // TODO Handle the downloaded image list
+        // Update UI or perform any other necessary actions
+        String message = String.format(Locale.UK,"Downloaded %d of %d images", downloaded, total);
+        handler.post(() -> {
+            ((CustomListAdapter)((GridView)findViewById(R.id.imageGridView)).getAdapter()).notifyDataSetChanged();
+            progressBar.setProgress(downloaded);
             progressText.setText(message);
         });
     }
-    public void interruptCleanUp(){
+    @Override
+    public void onAllImageDownloadComplete(String url){
+        futuresMap.remove(url);
+    }
+
+    @Override
+    public void onImageDownloadError(String url,String errorMessage) {
+        progressText.setText(errorMessage);
+        futuresMap.remove(url);
+    }
+
+    @Override
+    public void onTaskInterrupted(String url){
+        //TODO
         progressBar.setProgress(0);
         imageList.clear();
-        updateGridView("Previous query stopped");
+        handler.post(() -> {
+            ((CustomListAdapter)((GridView)findViewById(R.id.imageGridView)).getAdapter()).notifyDataSetChanged();
+            progressText.setText("Previous query stopped");
+        });
+        futuresMap.remove(url);
+        imageCache.evictAll();
+
     }
 }

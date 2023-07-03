@@ -3,8 +3,8 @@ package com.sa4108.draftca;
 import android.graphics.Bitmap;
 
 public class ImageItem {
-    private Bitmap bitmap;
-    private int tagNumber;
+    private final Bitmap bitmap;
+    private final int tagNumber;
 
     public ImageItem(Bitmap bitmap, int tagNumber) {
         this.bitmap = bitmap;

@@ -7,13 +7,13 @@ import android.util.LruCache;
 //Uses the singleton design pattern, ensuring that only one instance of CacheManager can exist.
 public class CacheManager {
     private static CacheManager instance;
-    private final LruCache<String, Bitmap> cache;
+    private final LruCache<String, Bitmap> imageCache;
 
     private CacheManager() {
         // Private constructor to prevent instantiation from outside the class
         int maxMemory = (int) Runtime.getRuntime().maxMemory() / 1024;
         int cacheSize = maxMemory / 8;
-        cache = new LruCache<>(cacheSize);
+        imageCache = new LruCache<>(cacheSize);
     }
     public static synchronized CacheManager getInstance() {
         if (instance == null) {
@@ -21,7 +21,7 @@ public class CacheManager {
         }
         return instance;
     }
-    public LruCache<String, Bitmap> getCache() {
-        return cache;
+    public LruCache<String, Bitmap> getImageCache() {
+        return imageCache;
     }
 }

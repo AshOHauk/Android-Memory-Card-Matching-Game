@@ -14,7 +14,7 @@ import java.util.Collections;
 import java.util.Map;
 
 public class CardImageAdapter extends ArrayAdapter {
-    private final LruCache<String, Bitmap> cache = CacheManager.getInstance().getCache();
+    private final LruCache<String, Bitmap> cache = CacheManager.getInstance().getImageCache();
     private ArrayList<ImageItem> gameImages;
     private boolean[] revealed;
     public CardImageAdapter(Context context) {

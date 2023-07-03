@@ -25,7 +25,7 @@ public class MemoryGameActivity extends AppCompatActivity {
     private Runnable timerRunnable;
     private final Handler handler = new Handler();
 
-    private final LruCache<String, Bitmap> cache = CacheManager.getInstance().getCache();
+    private final LruCache<String, Bitmap> cache = CacheManager.getInstance().getImageCache();
     private int firstSelectedPosition = -1;
     private int secondSelectedPosition = -1;
     private CardImageAdapter adapter;
@@ -34,7 +34,7 @@ public class MemoryGameActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_memory_game);
-        final GridView gridView = (GridView) findViewById(R.id.memoryGameGrid);
+        final GridView gridView = findViewById(R.id.memoryGameGrid);
         adapter = new CardImageAdapter(this);
         gridView.setAdapter(adapter);
         scoreDisplay = findViewById(R.id.score);

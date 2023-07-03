@@ -1,8 +1,11 @@
 package com.sa4108.draftca;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.LruCache;
+
+import androidx.annotation.NonNull;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,17 +14,21 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Locale;
+import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ImageDownloadTask implements Runnable{
     private final String newUrl;
-    private final MainActivity mainActivity;
-    private final LruCache<String, Bitmap> cache = CacheManager.getInstance().getCache();
-    public ImageDownloadTask(String newUrl, MainActivity mainActivity) {
+    public final ArrayList<String> imageList = new ArrayList<>();
+    private final ImageDownloadCallback callback;
+    private final Context context;
+    private final LruCache<String, Bitmap> imageCache = CacheManager.getInstance().getImageCache();
+
+    public ImageDownloadTask(String newUrl, @NonNull ImageDownloadCallback callback, Context context) {
         this.newUrl = newUrl;
-        this.mainActivity = mainActivity;
+        this.callback = callback;
+        this.context = context;
     }
     //Main Logic for downloading images
     @Override
@@ -45,7 +52,7 @@ public class ImageDownloadTask implements Runnable{
                 if(Thread.currentThread().isInterrupted()) {
                     httpConnection.disconnect();
                     reader.close();
-                    mainActivity.interruptCleanUp();
+                    callback.onTaskInterrupted(this.newUrl);
                     return;  // Thread has been interrupted, stop the task.
                 }
                 htmlContent.append(line);
@@ -55,25 +62,24 @@ public class ImageDownloadTask implements Runnable{
             //searches for <img> tags with src attributes containing image file extensions like .jpeg, .png, .jpg, .gif
             Pattern pattern = Pattern.compile("<img[^>]+src\\s*=\\s*['\"](https?://[^'\"]+(?:\\.jpeg|\\.png|\\.jpg|\\.gif|\\.JPEG|\\.PNG|\\.JPG|\\.GIF))['\"][^>]*>");
             Matcher matcher = pattern.matcher(htmlContent.toString());
-            //    private final ArrayList<String> imageList = new ArrayList<>();
             int maxNumberOfImages = 20;
-            while(matcher.find() && mainActivity.imageList.size() < maxNumberOfImages) {
+            while(matcher.find() && imageList.size() < maxNumberOfImages) {
                 if (Thread.currentThread().isInterrupted()) {
-                    mainActivity.interruptCleanUp();
+                    callback.onTaskInterrupted(this.newUrl);
                     return;  // Thread has been interrupted, stop the task.
                 }
                 String imageUrlString = matcher.group(1);
-                mainActivity.imageList.add(imageUrlString);
+                imageList.add(imageUrlString);
             }
+            callback.onUrlRetrievalComplete(imageList);
             //Step3: Download images
-            if(mainActivity.imageList.size()==0){
-                mainActivity.updateGridView("URL has no images. Please try a different URL");
+            if(imageList.size()==0){
+                callback.onImageDownloadError(this.newUrl,"URL has no images. Please try a different URL");
                 return;
             }
-            mainActivity.progressBar.setMax(mainActivity.imageList.size());
-            for(String imageUrlString : mainActivity.imageList){
+            for(String imageUrlString : imageList){
                 if (Thread.currentThread().isInterrupted()) {
-                    mainActivity.interruptCleanUp();
+                    callback.onTaskInterrupted(this.newUrl);
                     return;  // Thread has been interrupted, stop the task.
                 }
                 URL imageUrl = new URL(imageUrlString);
@@ -87,28 +93,28 @@ public class ImageDownloadTask implements Runnable{
                 if(bitmap != null) {
                     // Resize the bitmap if it was loaded
                     bitmap = resizeBitmap(bitmap);
-                    cache.put(imageUrlString, bitmap);
+                    imageCache.put(imageUrlString, bitmap);
                 }
                 input.close();
                 httpImgURLConnection.disconnect();
                 counter++;
-                String message = String.format(Locale.UK,"Downloaded %d of %d images", counter,mainActivity.imageList.size());
-                mainActivity.updateGridView(message);
+                callback.onEachImageDownloadComplete(counter,imageList.size());
             }
             // Download complete, remove task from futuresMap
-            mainActivity.futuresMap.remove(url.toString());
+            callback.onAllImageDownloadComplete(url.toString());
         } catch(IOException eio) {
             eio.printStackTrace();
             // Handle exception
-            mainActivity.updateGridView("No Images available. Please try another URL");
+            callback.onImageDownloadError(this.newUrl,"Please try a different URL");
         } catch(Exception e) {
             e.printStackTrace();
             // Handle exception
+            callback.onImageDownloadError(this.newUrl,"Error: "+e);
         }
     }
     //Resize bitmap while maintaining aspect ratio. To reduce memory usage if bitmap is especially large
     private Bitmap resizeBitmap(Bitmap source) {
-        int desiredSize = (int) (100 * mainActivity.getResources().getDisplayMetrics().density);
+        int desiredSize = (int) (100 * context.getResources().getDisplayMetrics().density);
         int width = source.getWidth();
         int height = source.getHeight();
 
