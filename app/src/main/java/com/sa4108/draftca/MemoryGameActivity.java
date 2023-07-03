@@ -24,8 +24,7 @@ public class MemoryGameActivity extends AppCompatActivity {
     private int secondsElapsed = 0;
     private Runnable timerRunnable;
     private final Handler handler = new Handler();
-
-    private final LruCache<String, Bitmap> cache = CacheManager.getInstance().getImageCache();
+    private final LruCache<String, Bitmap> imageCache = CacheManager.getInstance().getImageCache();
     private int firstSelectedPosition = -1;
     private int secondSelectedPosition = -1;
     private CardImageAdapter adapter;
@@ -43,6 +42,8 @@ public class MemoryGameActivity extends AppCompatActivity {
         String timeElapsed = "00:00";
         timerDisplay.setText(timeElapsed);
         startTimer();
+        AppAudioManager.incrementActiveActivityCount();
+        AppAudioManager.playSoundEffect(this,R.raw.sound_complete);
 
         gridView.setOnItemClickListener((parent, view, position, id) -> {
             if (adapter.isImageRevealed(position)){
@@ -67,6 +68,7 @@ public class MemoryGameActivity extends AppCompatActivity {
 
         if (firstImage.getTagNumber() == secondImage.getTagNumber()) {
             // Match found
+            AppAudioManager.playSoundEffect(this,R.raw.sound_complete);
             score++;
             scoreDisplay.setText(String.format(Locale.UK,"%d / 6", score));
             // Execute successful match sequence
@@ -126,6 +128,8 @@ public class MemoryGameActivity extends AppCompatActivity {
     }
 
     public void endGame(){
+        // Play Sound Effect
+        AppAudioManager.playSoundEffect(this,R.raw.sound_complete);
         // Stop Timer
         handler.removeCallbacks(timerRunnable);
         // Create a Dialog object
@@ -166,8 +170,23 @@ public class MemoryGameActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        cache.evictAll();
+        imageCache.evictAll();
         handler.removeCallbacks(timerRunnable);
+        AppAudioManager.decrementActiveActivityCount();
+        AppAudioManager.stopBackgroundAudio();
+        AppAudioManager.releaseSoundEffectPool();
     }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        AppAudioManager.pauseBackgroundAudio();
+    }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        AppAudioManager.resumeBackgroundAudio();
+    }
+
 
 }

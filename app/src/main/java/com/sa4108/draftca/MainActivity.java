@@ -43,6 +43,8 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        AppAudioManager.incrementActiveActivityCount();
+        AppAudioManager.startBackgroundAudio(this, R.raw.game_start);
         final EditText urlEditText = findViewById(R.id.urlEditText);
 
         CustomListAdapter customListAdapter = new CustomListAdapter(this,imageList);
@@ -105,7 +107,20 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
         super.onDestroy();
         imageCache.evictAll();
         executorService.shutdown();
+        AppAudioManager.decrementActiveActivityCount();
+        AppAudioManager.stopBackgroundAudio();
     }
+    @Override
+    protected void onPause() {
+        super.onPause();
+        AppAudioManager.pauseBackgroundAudio();
+    }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        AppAudioManager.resumeBackgroundAudio();
+    }
+
 
     private boolean toggleImageSelection(String image) {
         if (selectedImages.contains(image)) {
@@ -162,6 +177,5 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
         });
         futuresMap.remove(url);
         imageCache.evictAll();
-
     }
 }
