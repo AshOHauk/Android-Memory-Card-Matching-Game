@@ -42,7 +42,7 @@ public class MemoryGameActivity extends AppCompatActivity {
         String timeElapsed = "00:00";
         timerDisplay.setText(timeElapsed);
         startTimer();
-        AppAudioManager.incrementActiveActivityCount();
+
         AppAudioManager.playSoundEffect(this,R.raw.sound_complete);
 
         gridView.setOnItemClickListener((parent, view, position, id) -> {
@@ -76,6 +76,7 @@ public class MemoryGameActivity extends AppCompatActivity {
             secondSelectedPosition = -1;
         } else {
             // No match
+            VibrationManager.vibrate(this,200);
             // Un-Reveal the images after a certain delay
             // Reset firstSelected and secondSelected
             handler.postDelayed(() -> {
@@ -158,7 +159,9 @@ public class MemoryGameActivity extends AppCompatActivity {
         // Find and set up any views or buttons within the popup layout
         Button closeButton = popupDialog.findViewById(R.id.closeButton);
         closeButton.setOnClickListener(v -> {
+            popupDialog.dismiss();
             Intent intent = new Intent(this, MainActivity.class);
+            AppAudioManager.incrementActiveActivityCount();
             startActivity(intent);
             this.finish();
         });
@@ -175,17 +178,19 @@ public class MemoryGameActivity extends AppCompatActivity {
         AppAudioManager.decrementActiveActivityCount();
         AppAudioManager.stopBackgroundAudio();
         AppAudioManager.releaseSoundEffectPool();
-    }
+        }
 
     @Override
     protected void onPause() {
         super.onPause();
         AppAudioManager.pauseBackgroundAudio();
+        // TODO pause the timer
     }
     @Override
     protected void onResume() {
         super.onResume();
         AppAudioManager.resumeBackgroundAudio();
+        // TODO resume the timer
     }
 
 

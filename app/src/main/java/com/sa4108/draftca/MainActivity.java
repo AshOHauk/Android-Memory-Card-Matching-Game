@@ -43,7 +43,6 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        AppAudioManager.incrementActiveActivityCount();
         AppAudioManager.startBackgroundAudio(this, R.raw.game_start);
         final EditText urlEditText = findViewById(R.id.urlEditText);
 
@@ -69,6 +68,7 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
                         }
                     }
                     Intent intent = new Intent(this, MemoryGameActivity.class);
+                    AppAudioManager.incrementActiveActivityCount();
                     startActivity(intent);
                     this.finish();
                 }
@@ -136,6 +136,7 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
     @Override
     public void onUrlRetrievalComplete(ArrayList<String> ImageUrlList){
         this.imageList.clear();
+        imageCache.evictAll();
         progressBar.setMax(ImageUrlList.size());
         imageList.addAll(ImageUrlList);
         handler.post(() -> {

@@ -9,12 +9,10 @@ public class AppAudioManager {
     private static MediaPlayer mediaPlayer;
     private static SoundPool soundEffectPool;
     private static int soundEffectId;
-    private static int activeActivityCount = 0;
+    private static int activeActivityCount = 1;
 
     public static void startBackgroundAudio(Context context, int backgroundMusicResourceId) {
-        if (mediaPlayer == null || !mediaPlayer.isPlaying()) {
-            stopBackgroundAudio(); // Stop any previously playing background music
-
+        if (mediaPlayer == null) {
             mediaPlayer = MediaPlayer.create(context, backgroundMusicResourceId);
             mediaPlayer.setLooping(true);
             mediaPlayer.start();
