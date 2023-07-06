@@ -4,7 +4,7 @@ import android.content.Context;
 import android.os.Build;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
-
+// Utility class to vibrate the device
 public class VibrationManager {
 
     public static void vibrate(Context context, long milliseconds) {

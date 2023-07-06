@@ -5,6 +5,7 @@ import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.media.SoundPool;
 
+// Utility class to manage audio and sound effects
 public class AppAudioManager {
     private static MediaPlayer mediaPlayer;
     private static SoundPool soundEffectPool;

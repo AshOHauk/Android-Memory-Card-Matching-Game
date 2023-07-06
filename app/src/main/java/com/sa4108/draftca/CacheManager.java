@@ -3,8 +3,8 @@ package com.sa4108.draftca;
 import android.graphics.Bitmap;
 import android.util.LruCache;
 
-//Responsible for creating and managing a cache of Bitmap objects.
-//Uses the singleton design pattern, ensuring that only one instance of CacheManager can exist.
+// Responsible for creating and managing a cache of Bitmap objects.
+// Uses the singleton design pattern, ensuring that only one instance of CacheManager can exist.
 public class CacheManager {
     private static CacheManager instance;
     private final LruCache<String, Bitmap> imageCache;
