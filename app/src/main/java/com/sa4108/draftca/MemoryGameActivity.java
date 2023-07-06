@@ -112,6 +112,7 @@ public class MemoryGameActivity extends AppCompatActivity {
         String time = String.format(Locale.UK,"%02d:%02d", minutes, seconds);
         timerDisplay.setText(time);
     }
+    
     @Override
     public void onBackPressed() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);

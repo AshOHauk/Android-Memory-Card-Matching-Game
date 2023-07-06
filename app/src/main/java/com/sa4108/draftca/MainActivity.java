@@ -121,7 +121,6 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
         AppAudioManager.resumeBackgroundAudio();
     }
 
-
     private boolean toggleImageSelection(String image) {
         if (selectedImages.contains(image)) {
             // Image is already selected, so remove it from the list
