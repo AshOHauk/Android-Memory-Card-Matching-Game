@@ -17,7 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.Locale;
 
-public class MemoryGameActivity extends AppCompatActivity {
+public class MemoryGame2PActivity extends AppCompatActivity {
     private TextView scoreDisplay;
     private TextView timerDisplay;
     private int score=0;
@@ -32,7 +32,7 @@ public class MemoryGameActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_memory_game);
+        setContentView(R.layout.activity_memory_game_2p);
 
         final GridView gridView = findViewById(R.id.memoryGameGrid);
         adapter = new CardImageAdapter(this);
