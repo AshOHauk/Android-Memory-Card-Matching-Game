@@ -7,6 +7,8 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.LruCache;
+import android.view.MotionEvent;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -28,6 +30,9 @@ public class MemoryGameActivity extends AppCompatActivity {
     private int firstSelectedPosition = -1;
     private int secondSelectedPosition = -1;
     private CardImageAdapter adapter;
+    private Button pause;
+    boolean btnIsPressed=true;
+    boolean isPaused;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +64,34 @@ public class MemoryGameActivity extends AppCompatActivity {
                 adapter.revealImage(position);
                 // Compare the tag numbers of the first and second selected images
                 compareImages();
+            }
+        });
+
+        pause = findViewById(R.id.pauseBtn);
+        pause.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                int id = view.getId();
+                if(id==R.id.pauseBtn) {
+                    if (!isPaused) {
+                        btnIsPressed = true;
+                        onPause();
+                        pause.setText("Continue");
+                        gridView.setOnTouchListener(new View.OnTouchListener() {
+                            @Override
+                            public boolean onTouch(View v, MotionEvent event) {
+                                return true;
+                            }
+                        });
+
+
+                    } else if (isPaused) {
+                        btnIsPressed=false;
+                        onResume();
+                        pause.setText("Pause");
+                        gridView.setOnTouchListener(null);
+                    }
+                }
             }
         });
     }
@@ -184,13 +217,17 @@ public class MemoryGameActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         AppAudioManager.pauseBackgroundAudio();
-        // TODO pause the timer
+        handler.removeCallbacks(timerRunnable);
+        isPaused=true;
     }
     @Override
     protected void onResume() {
         super.onResume();
         AppAudioManager.resumeBackgroundAudio();
-        // TODO resume the timer
+        if (!btnIsPressed && isPaused){
+            handler.postDelayed(timerRunnable, 1000);
+            isPaused=false;
+        }
     }
 
 

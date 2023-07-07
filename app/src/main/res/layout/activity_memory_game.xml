@@ -31,6 +31,14 @@
             android:textSize="30sp"
             app:layout_constraintTop_toBottomOf="@id/scoreLabel"
             app:layout_constraintStart_toStartOf="parent"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/pauseBtn"
+            android:text="Pause"
+            app:layout_constraintLeft_toRightOf="@id/scoreLabel"
+            app:layout_constraintRight_toLeftOf="@+id/timerLabel"
+            app:layout_constraintTop_toTopOf="parent"/>
 
 
         <TextView
