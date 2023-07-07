@@ -76,6 +76,7 @@ public class MemoryGameActivity extends AppCompatActivity {
             secondSelectedPosition = -1;
         } else {
             // No match
+            AppAudioManager.playSoundEffect(this,R.raw.error_126627);
             VibrationManager.vibrate(this,200);
             // Un-Reveal the images after a certain delay
             // Reset firstSelected and secondSelected
