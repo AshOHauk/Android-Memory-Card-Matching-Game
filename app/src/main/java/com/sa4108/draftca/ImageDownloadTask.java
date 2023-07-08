@@ -13,14 +13,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ImageDownloadTask implements Runnable{
+public class ImageDownloadTask implements Runnable {
     private final String newUrl;
-    public final ArrayList<String> imageList = new ArrayList<>();
+    private final ArrayList<String> imageList = new ArrayList<>();
     private final ImageDownloadCallback callback;
     private final Context context;
     private final LruCache<String, Bitmap> imageCache = CacheManager.getInstance().getImageCache();
@@ -30,89 +31,96 @@ public class ImageDownloadTask implements Runnable{
         this.callback = callback;
         this.context = context;
     }
-    //Main Logic for downloading images
+
     @Override
     public void run() {
         try {
-            int counter = 0;
-            //Step 1: Load the web page content
+            // Load the web page content
             URL url = new URL(this.newUrl);
-            URLConnection connection = url.openConnection();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestProperty("User-Agent",
                     "Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.2.28) Gecko/20120306 Firefox/3.6.28");
-            HttpURLConnection httpConnection = (HttpURLConnection) connection;
-            int responseCode = httpConnection.getResponseCode();
-            if(responseCode!=200){
+            int responseCode = connection.getResponseCode();
+            if (responseCode != 200) {
                 throw new Exception("Non-200 HTTP Response received: " + responseCode);
             }
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            String line;
-            StringBuilder htmlContent = new StringBuilder();
-            while((line = reader.readLine()) != null) {
-                if(Thread.currentThread().isInterrupted()) {
-                    httpConnection.disconnect();
-                    reader.close();
-                    callback.onTaskInterrupted(this.newUrl);
-                    return;  // Thread has been interrupted, stop the task.
-                }
-                htmlContent.append(line);
-            }
-            reader.close();
-            //Step 2: Extract the imageURLS
-            //searches for <img> tags with src attributes containing image file extensions like .jpeg, .png, .jpg, .gif
-            Pattern pattern = Pattern.compile("<img[^>]+src\\s*=\\s*['\"](https?://[^'\"]+(?:\\.jpeg|\\.png|\\.jpg|\\.gif|\\.JPEG|\\.PNG|\\.JPG|\\.GIF))['\"][^>]*>");
-            Matcher matcher = pattern.matcher(htmlContent.toString());
+
+            InputStream inputStream = connection.getInputStream();
+            String htmlContent = readInputStream(inputStream);
+            inputStream.close();
+
+            // Extract the imageURLS
+            String patternString = "<img[^>]+src\\s*=\\s*['\"](https?://[^'\"]+(?:\\.jpeg|\\.png|\\.jpg|\\.gif|\\.JPEG|\\.PNG|\\.JPG|\\.GIF))['\"][^>]*>";
+            Pattern pattern = Pattern.compile(patternString);
+            Matcher matcher = pattern.matcher(htmlContent);
             int maxNumberOfImages = 20;
-            while(matcher.find() && imageList.size() < maxNumberOfImages) {
-                if (Thread.currentThread().isInterrupted()) {
-                    callback.onTaskInterrupted(this.newUrl);
-                    return;  // Thread has been interrupted, stop the task.
-                }
+            while (matcher.find() && imageList.size() < maxNumberOfImages) {
                 String imageUrlString = matcher.group(1);
                 imageList.add(imageUrlString);
             }
+
             callback.onUrlRetrievalComplete(imageList);
-            //Step3: Download images
-            if(imageList.size()==0){
-                callback.onImageDownloadError(this.newUrl,"URL has no images. Please try a different URL");
+
+            // Download images
+            if (imageList.size() == 0) {
+                callback.onImageDownloadError(this.newUrl, "URL has no images. Please try a different URL");
                 return;
             }
-            for(String imageUrlString : imageList){
-                if (Thread.currentThread().isInterrupted()) {
-                    callback.onTaskInterrupted(this.newUrl);
-                    return;  // Thread has been interrupted, stop the task.
-                }
-                URL imageUrl = new URL(imageUrlString);
-                HttpURLConnection httpImgURLConnection = (HttpURLConnection) imageUrl.openConnection();
-                httpImgURLConnection.setDoInput(true);
-                httpImgURLConnection.setRequestProperty("User-Agent",
-                        "Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.2.28) Gecko/20120306 Firefox/3.6.28");
-                httpImgURLConnection.connect();
-                InputStream input = httpImgURLConnection.getInputStream();
-                Bitmap bitmap = BitmapFactory.decodeStream(input);
-                if(bitmap != null) {
-                    // Resize the bitmap if it was loaded
-                    bitmap = resizeBitmap(bitmap);
-                    imageCache.put(imageUrlString, bitmap);
-                }
-                input.close();
-                httpImgURLConnection.disconnect();
-                counter++;
-                callback.onEachImageDownloadComplete(counter,imageList.size());
+
+            int numThreads = Math.min(imageList.size(), Runtime.getRuntime().availableProcessors());
+            ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
+
+            for (String imageUrlString : imageList) {
+                executorService.execute(() -> {
+                    try {
+                        URL imageUrl = new URL(imageUrlString);
+                        HttpURLConnection imgConnection = (HttpURLConnection) imageUrl.openConnection();
+                        imgConnection.setRequestProperty("User-Agent",
+                                "Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.2.28) Gecko/20120306 Firefox/3.6.28");
+                        InputStream imgInputStream = imgConnection.getInputStream();
+                        Bitmap bitmap = BitmapFactory.decodeStream(imgInputStream);
+                        imgInputStream.close();
+                        imgConnection.disconnect();
+
+                        if (bitmap != null) {
+                            // Resize the bitmap if it was loaded
+                            bitmap = resizeBitmap(bitmap);
+                            imageCache.put(imageUrlString, bitmap);
+                        }
+
+                        callback.onEachImageDownloadComplete(imageCache.size(), imageList.size());
+
+                        if (imageCache.size() == imageList.size()) {
+                            callback.onAllImageDownloadComplete(url.toString());
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        callback.onImageDownloadError(this.newUrl, "Error downloading image: " + e.getMessage());
+                    }
+                });
             }
-            // Download complete, remove task from futuresMap
-            callback.onAllImageDownloadComplete(url.toString());
-        } catch(IOException eio) {
+
+            executorService.shutdown();
+        } catch (IOException eio) {
             eio.printStackTrace();
-            // Handle exception
-            callback.onImageDownloadError(this.newUrl,"Please try a different URL");
-        } catch(Exception e) {
+            callback.onImageDownloadError(this.newUrl, "Please try a different URL");
+        } catch (Exception e) {
             e.printStackTrace();
-            // Handle exception
-            callback.onImageDownloadError(this.newUrl,"Error: "+e);
+            callback.onImageDownloadError(this.newUrl, "Error: " + e.getMessage());
         }
     }
-    //Resize bitmap while maintaining aspect ratio. To reduce memory usage if bitmap is especially large
+
+    private String readInputStream(InputStream inputStream) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        String line;
+        while ((line = reader.readLine()) != null) {
+            sb.append(line).append("\n");
+        }
+        reader.close();
+        return sb.toString();
+    }
+
     private Bitmap resizeBitmap(Bitmap source) {
         int desiredSize = (int) (100 * context.getResources().getDisplayMetrics().density);
         int width = source.getWidth();
@@ -121,7 +129,6 @@ public class ImageDownloadTask implements Runnable{
         float bitmapRatio = (float) width / (float) height;
         int scaledWidth, scaledHeight;
 
-        // Checking if the image is landscape or portrait
         if (bitmapRatio > 1) {
             scaledWidth = desiredSize;
             scaledHeight = (int) (scaledWidth / bitmapRatio);
@@ -130,12 +137,6 @@ public class ImageDownloadTask implements Runnable{
             scaledWidth = (int) (scaledHeight * bitmapRatio);
         }
 
-        Bitmap scaledBitmap = Bitmap.createScaledBitmap(source, scaledWidth, scaledHeight, true);
-
-        if (source != scaledBitmap) {
-            // Ensure we're using the scaled bitmap and that the original bitmap is ready for garbage collection
-            source.recycle();
-        }
-        return scaledBitmap;
+        return Bitmap.createScaledBitmap(source, scaledWidth, scaledHeight, true);
     }
 }
