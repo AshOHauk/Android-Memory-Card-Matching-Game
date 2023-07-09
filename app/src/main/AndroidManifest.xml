@@ -38,7 +38,7 @@
             android:exported="false" />
         <activity
             android:name=".MemoryGameMultiActivity"
-            android:screenOrientation="portrait"
+            android:screenOrientation="landscape"
             android:windowSoftInputMode="adjustPan"
             android:exported="false" />
     </application>
