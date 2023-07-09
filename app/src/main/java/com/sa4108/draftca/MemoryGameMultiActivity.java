@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
 import android.util.LruCache;
 import android.view.Window;
 import android.view.WindowManager;
@@ -21,11 +20,11 @@ import java.util.Locale;
 public class MemoryGameMultiActivity extends AppCompatActivity {
 
     private int playerTurn;
+    private String matchResult;
     private TextView scoreDisplay_One;
     private TextView timerDisplay_One;
     private int score_One =0;
     private int secondsElapsed_One = 0;
-
     private TextView scoreDisplay_Two;
     private TextView timerDisplay_Two;
     private int score_Two =0;
@@ -54,12 +53,29 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
         timerDisplay_One = findViewById(R.id.timer_One);
         scoreDisplay_One.setText(String.format(Locale.UK, "%d /6", score_One));
         timerDisplay_One.setText(timeElapsed);
+        timerRunnable_One = new Runnable() {
+            @Override
+            public void run() {
+                secondsElapsed_One++;
+                updateTimerDisplay();
+                handler.postDelayed(this, 1000); // Run the task every 1 second
+            }
+        };
 
         scoreDisplay_Two = findViewById(R.id.score_Two);
         timerDisplay_Two = findViewById(R.id.timer_Two);
         scoreDisplay_Two.setText(String.format(Locale.UK, "%d /6", score_Two));
         timerDisplay_Two.setText(timeElapsed);
+        timerRunnable_Two = new Runnable() {
+            @Override
+            public void run() {
+                secondsElapsed_Two++;
+                updateTimerDisplay();
+                handler.postDelayed(this, 1000); // Run the task every 1 second
+            }
+        };
 
+        //kick off p1's turn
         startTimer();
 
         AppAudioManager.playSoundEffect(this,R.raw.sound_complete);
@@ -114,10 +130,12 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
             }, 1000); // Delay in milliseconds
         }
 
+        stopTimer();
         playerTurn++;
         startTimer();
 
         if((score_One+score_Two) ==6){
+            stopTimer();
             endGame();
         }
     }
@@ -125,42 +143,13 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
     private void startTimer() {
         // Run the task every 1 second
         if(playerTurn%2 == 0){
-            if(timerRunnable_Two==null){
-                timerRunnable_Two = new Runnable() {
-                    @Override
-                    public void run() {
-                        secondsElapsed_Two++;
-                        updateTimerDisplay();
-                        handler.postDelayed(this, 1000); // Run the task every 1 second
-                    }
-                };
-                handler.postDelayed(timerRunnable_Two, 1000);   //starts after 1s
-            }
-            else if (timerRunnable_Two!=null){
-                Log.d("startTimer", "Trying to start non-null timer thread on p2 turn");
-            }
-
+            // timerRunnable used to be here
+            handler.postDelayed(timerRunnable_Two, 1000);   //starts after 1s
         }
         else if (playerTurn%2 !=0){
-
-            if(timerRunnable_Two==null){
-                timerRunnable_One = new Runnable() {
-                    @Override
-                    public void run() {
-                        secondsElapsed_One++;
-                        updateTimerDisplay();
-                        handler.postDelayed(this, 1000); // Run the task every 1 second
-                    }
-                };
-                // Start the timer task
-                handler.postDelayed(timerRunnable_One, 1000);   //starts after 1s
-            }
-            else if (timerRunnable_Two!=null){
-                Log.d("startTimer", "Trying to start non-null timer thread on p1 turn");
-            }
+            // timerRunnable used to be here
+            handler.postDelayed(timerRunnable_One, 1000);   //starts after 1s
         }
-
-
     }
 
     private void updateTimerDisplay() {
@@ -179,8 +168,12 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
     }
 
     private void stopTimer(){
-        handler.removeCallbacks(timerRunnable_One);
-        handler.removeCallbacks(timerRunnable_Two);
+        if(playerTurn%2 == 0){  //end of p2 turn
+            handler.removeCallbacks(timerRunnable_Two);
+        }
+        else if (playerTurn%2 !=0){  //end of p1 turn
+            handler.removeCallbacks(timerRunnable_One);
+        }
     }
 
     @Override
@@ -204,6 +197,10 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
         AppAudioManager.playSoundEffect(this,R.raw.sound_complete);
         // Stop Timer
         handler.removeCallbacks(timerRunnable_One);
+
+        //TODO: use match result
+        decideWinner();
+
         // Create a Dialog object
         Dialog popupDialog = new Dialog(this);
         // Set the custom layout for the popup
@@ -219,13 +216,14 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
             window.setAttributes(layoutParams);
         }
 
-        // Find the TextView for time in the popup layout
+        // Find the TextView for label in the popup layout
+        TextView finalLabel = popupDialog.findViewById(R.id.popupLabel);
+        // Find the TextView for value in the popup layout
         TextView finalTimeTextView = popupDialog.findViewById(R.id.finalTime);
-        // Set the time value as the text for the TextView
-        int minutes = secondsElapsed_One / 60;
-        int seconds = secondsElapsed_One % 60;
-        String time = String.format(Locale.UK,"%02d:%02d", minutes, seconds);
-        finalTimeTextView.setText(time);
+
+        // Set the values for the popup window
+        finalLabel.setText("Match Result");
+        finalTimeTextView.setText(matchResult);
 
         // Find and set up any views or buttons within the popup layout
         Button closeButton = popupDialog.findViewById(R.id.closeButton);
@@ -239,6 +237,23 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
 
         // Show the popup
         popupDialog.show();
+    }
+
+    public void decideWinner(){
+        String p1 = "Player One Wins!";
+        String p2 = "Player Two Wins!";
+        if(score_Two > score_One)
+            matchResult = p2;
+        else if(score_Two < score_One)
+            matchResult = p1;
+        else{
+            if(secondsElapsed_Two > secondsElapsed_One)
+                matchResult = p1;
+            else if(secondsElapsed_Two < secondsElapsed_One)
+                matchResult = p2;
+            else
+                matchResult = "Draw";
+        }
     }
 
     @Override
