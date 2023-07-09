@@ -2,6 +2,7 @@ package com.sa4108.draftca;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
@@ -48,16 +49,24 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        isMultiplayer = false;
+        //Initialize Multiplayer switch and store the value in SharedPreferences
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        isMultiplayer = sharedPref.getBoolean("isMultiplayer",false);
         modeSwitch = findViewById(R.id.modeSwitch);
+        if (isMultiplayer)
+            modeSwitch.setChecked(true);
         modeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                SharedPreferences.Editor editor = sharedPref.edit();
                 if (isChecked) {
                     isMultiplayer=true;
                 } else {
                     isMultiplayer=false;
                 }
+                editor.putBoolean("isMultiplayer",isMultiplayer);
+                editor.commit();
             }
         });
 
