@@ -67,7 +67,11 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
                             imageCache.remove(url);
                         }
                     }
-                    Intent intent = new Intent(this, MemoryGameActivity.class);
+
+                    //TODO: change this to a popup window
+                    //  or just give it a button to toggle?
+                    //Intent intent = new Intent(this, MemoryGameActivity.class);
+                    Intent intent = new Intent(this, MemoryGameMultiActivity.class);
                     AppAudioManager.incrementActiveActivityCount();
                     startActivity(intent);
                     this.finish();

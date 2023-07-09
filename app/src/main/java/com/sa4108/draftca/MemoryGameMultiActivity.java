@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.util.LruCache;
 import android.view.Window;
 import android.view.WindowManager;
@@ -18,11 +19,19 @@ import androidx.appcompat.app.AppCompatActivity;
 import java.util.Locale;
 
 public class MemoryGameMultiActivity extends AppCompatActivity {
-    private TextView scoreDisplay;
-    private TextView timerDisplay;
-    private int score=0;
-    private int secondsElapsed = 0;
-    private Runnable timerRunnable;
+
+    private int playerTurn;
+    private TextView scoreDisplay_One;
+    private TextView timerDisplay_One;
+    private int score_One =0;
+    private int secondsElapsed_One = 0;
+
+    private TextView scoreDisplay_Two;
+    private TextView timerDisplay_Two;
+    private int score_Two =0;
+    private int secondsElapsed_Two = 0;
+    private Runnable timerRunnable_One;
+    private Runnable timerRunnable_Two;
     private final Handler handler = new Handler();
     private final LruCache<String, Bitmap> imageCache = CacheManager.getInstance().getImageCache();
     private int firstSelectedPosition = -1;
@@ -37,11 +46,20 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
         final GridView gridView = findViewById(R.id.memoryGameGrid);
         adapter = new CardImageAdapter(this);
         gridView.setAdapter(adapter);
-        scoreDisplay = findViewById(R.id.score);
-        timerDisplay = findViewById(R.id.timer);
-        scoreDisplay.setText(String.format(Locale.UK, "%d /6",score));
+
+        playerTurn=1;
         String timeElapsed = "00:00";
-        timerDisplay.setText(timeElapsed);
+
+        scoreDisplay_One = findViewById(R.id.score_One);
+        timerDisplay_One = findViewById(R.id.timer_One);
+        scoreDisplay_One.setText(String.format(Locale.UK, "%d /6", score_One));
+        timerDisplay_One.setText(timeElapsed);
+
+        scoreDisplay_Two = findViewById(R.id.score_Two);
+        timerDisplay_Two = findViewById(R.id.timer_Two);
+        scoreDisplay_Two.setText(String.format(Locale.UK, "%d /6", score_Two));
+        timerDisplay_Two.setText(timeElapsed);
+
         startTimer();
 
         AppAudioManager.playSoundEffect(this,R.raw.sound_complete);
@@ -70,8 +88,16 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
         if (firstImage.getTagNumber() == secondImage.getTagNumber()) {
             // Match found
             AppAudioManager.playSoundEffect(this,R.raw.sound_complete);
-            score++;
-            scoreDisplay.setText(String.format(Locale.UK,"%d / 6", score));
+
+            //award point to respective player
+            if(playerTurn%2 == 0){
+                score_Two++;
+                scoreDisplay_Two.setText(String.format(Locale.UK,"%d / 6", score_Two));
+            }
+            else if (playerTurn%2 !=0){
+                score_One++;
+                scoreDisplay_One.setText(String.format(Locale.UK,"%d / 6", score_One));
+            }
             // Execute successful match sequence
             firstSelectedPosition = -1;
             secondSelectedPosition = -1;
@@ -87,32 +113,76 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
                 secondSelectedPosition = -1;
             }, 1000); // Delay in milliseconds
         }
-        if(score==6){
+
+        playerTurn++;
+        startTimer();
+
+        if((score_One+score_Two) ==6){
             endGame();
         }
     }
 
     private void startTimer() {
         // Run the task every 1 second
-            timerRunnable = new Runnable() {
-            @Override
-            public void run() {
-                secondsElapsed++;
-                updateTimerDisplay();
-                handler.postDelayed(this, 1000); // Run the task every 1 second
+        if(playerTurn%2 == 0){
+            if(timerRunnable_Two==null){
+                timerRunnable_Two = new Runnable() {
+                    @Override
+                    public void run() {
+                        secondsElapsed_Two++;
+                        updateTimerDisplay();
+                        handler.postDelayed(this, 1000); // Run the task every 1 second
+                    }
+                };
+                handler.postDelayed(timerRunnable_Two, 1000);   //starts after 1s
             }
-        };
+            else if (timerRunnable_Two!=null){
+                Log.d("startTimer", "Trying to start non-null timer thread on p2 turn");
+            }
 
-        // Start the timer task
-        handler.postDelayed(timerRunnable, 1000);
+        }
+        else if (playerTurn%2 !=0){
+
+            if(timerRunnable_Two==null){
+                timerRunnable_One = new Runnable() {
+                    @Override
+                    public void run() {
+                        secondsElapsed_One++;
+                        updateTimerDisplay();
+                        handler.postDelayed(this, 1000); // Run the task every 1 second
+                    }
+                };
+                // Start the timer task
+                handler.postDelayed(timerRunnable_One, 1000);   //starts after 1s
+            }
+            else if (timerRunnable_Two!=null){
+                Log.d("startTimer", "Trying to start non-null timer thread on p1 turn");
+            }
+        }
+
+
     }
 
     private void updateTimerDisplay() {
-        int minutes = secondsElapsed / 60;
-        int seconds = secondsElapsed % 60;
-        String time = String.format(Locale.UK,"%02d:%02d", minutes, seconds);
-        timerDisplay.setText(time);
+        if(playerTurn%2 == 0){
+            int minutes = secondsElapsed_Two / 60;
+            int seconds = secondsElapsed_Two % 60;
+            String time = String.format(Locale.UK,"%02d:%02d", minutes, seconds);
+            timerDisplay_Two.setText(time);
+        }
+        else if (playerTurn%2 !=0){
+            int minutes = secondsElapsed_One / 60;
+            int seconds = secondsElapsed_One % 60;
+            String time = String.format(Locale.UK,"%02d:%02d", minutes, seconds);
+            timerDisplay_One.setText(time);
+        }
     }
+
+    private void stopTimer(){
+        handler.removeCallbacks(timerRunnable_One);
+        handler.removeCallbacks(timerRunnable_Two);
+    }
+
     @Override
     public void onBackPressed() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -133,7 +203,7 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
         // Play Sound Effect
         AppAudioManager.playSoundEffect(this,R.raw.sound_complete);
         // Stop Timer
-        handler.removeCallbacks(timerRunnable);
+        handler.removeCallbacks(timerRunnable_One);
         // Create a Dialog object
         Dialog popupDialog = new Dialog(this);
         // Set the custom layout for the popup
@@ -152,8 +222,8 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
         // Find the TextView for time in the popup layout
         TextView finalTimeTextView = popupDialog.findViewById(R.id.finalTime);
         // Set the time value as the text for the TextView
-        int minutes = secondsElapsed / 60;
-        int seconds = secondsElapsed % 60;
+        int minutes = secondsElapsed_One / 60;
+        int seconds = secondsElapsed_One % 60;
         String time = String.format(Locale.UK,"%02d:%02d", minutes, seconds);
         finalTimeTextView.setText(time);
 
@@ -175,7 +245,7 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         imageCache.evictAll();
-        handler.removeCallbacks(timerRunnable);
+        handler.removeCallbacks(timerRunnable_One);
         AppAudioManager.decrementActiveActivityCount();
         AppAudioManager.stopBackgroundAudio();
         AppAudioManager.releaseSoundEffectPool();

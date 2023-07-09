@@ -37,8 +37,8 @@ public class MemoryGameActivity extends AppCompatActivity {
         final GridView gridView = findViewById(R.id.memoryGameGrid);
         adapter = new CardImageAdapter(this);
         gridView.setAdapter(adapter);
-        scoreDisplay = findViewById(R.id.score);
-        timerDisplay = findViewById(R.id.timer);
+        scoreDisplay = findViewById(R.id.score_One);
+        timerDisplay = findViewById(R.id.timer_One);
         scoreDisplay.setText(String.format(Locale.UK, "%d /6",score));
         String timeElapsed = "00:00";
         timerDisplay.setText(timeElapsed);
@@ -94,7 +94,7 @@ public class MemoryGameActivity extends AppCompatActivity {
 
     private void startTimer() {
         // Run the task every 1 second
-            timerRunnable = new Runnable() {
+        timerRunnable = new Runnable() {
             @Override
             public void run() {
                 secondsElapsed++;
