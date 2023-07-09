@@ -7,9 +7,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.LruCache;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ProgressBar;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -30,6 +32,8 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
     //In this case, a single-thread executor is created, it processes one task at a time (FIFO)
     private final ArrayList<String> imageList = new ArrayList<>();
     //List of imageUrls scraped from website
+    private Switch modeSwitch;
+    private boolean isMultiplayer;
     private ProgressBar progressBar;
     private TextView progressText;
     private final Map<String, Future<?>> futuresMap = new ConcurrentHashMap<>();
@@ -43,6 +47,20 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        isMultiplayer = false;
+        modeSwitch = findViewById(R.id.modeSwitch);
+        modeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    isMultiplayer=true;
+                } else {
+                    isMultiplayer=false;
+                }
+            }
+        });
+
         AppAudioManager.startBackgroundAudio(this, R.raw.game_start);
         final EditText urlEditText = findViewById(R.id.urlEditText);
 
@@ -67,11 +85,13 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
                             imageCache.remove(url);
                         }
                     }
-
-                    //TODO: change this to a popup window
-                    //  or just give it a button to toggle?
-                    //Intent intent = new Intent(this, MemoryGameActivity.class);
-                    Intent intent = new Intent(this, MemoryGameMultiActivity.class);
+                    Intent intent;
+                    if(isMultiplayer){
+                        intent = new Intent(this, MemoryGameMultiActivity.class);
+                    }
+                    else{
+                        intent = new Intent(this, MemoryGameActivity.class);
+                    }
                     AppAudioManager.incrementActiveActivityCount();
                     startActivity(intent);
                     this.finish();
@@ -106,6 +126,8 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
         });
+
+
     }
     protected void onDestroy(){
         super.onDestroy();

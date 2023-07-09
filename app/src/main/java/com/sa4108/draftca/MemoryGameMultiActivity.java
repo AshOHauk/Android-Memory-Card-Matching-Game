@@ -198,7 +198,6 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
         // Stop Timer
         handler.removeCallbacks(timerRunnable_One);
 
-        //TODO: use match result
         decideWinner();
 
         // Create a Dialog object
@@ -240,19 +239,17 @@ public class MemoryGameMultiActivity extends AppCompatActivity {
     }
 
     public void decideWinner(){
-        String p1 = "Player One Wins!";
-        String p2 = "Player Two Wins!";
         if(score_Two > score_One)
-            matchResult = p2;
+            matchResult = getString(R.string.p2_win);
         else if(score_Two < score_One)
-            matchResult = p1;
+            matchResult = getString(R.string.p1_win);
         else{
             if(secondsElapsed_Two > secondsElapsed_One)
-                matchResult = p1;
+                matchResult = getString(R.string.p1_win);
             else if(secondsElapsed_Two < secondsElapsed_One)
-                matchResult = p2;
+                matchResult = getString(R.string.p2_win);
             else
-                matchResult = "Draw";
+                matchResult = getString(R.string.draw);
         }
     }
 
