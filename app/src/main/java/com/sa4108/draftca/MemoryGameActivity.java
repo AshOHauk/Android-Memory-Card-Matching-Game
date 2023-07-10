@@ -31,7 +31,7 @@ public class MemoryGameActivity extends AppCompatActivity {
     private int secondSelectedPosition = -1;
     private CardImageAdapter adapter;
     private Button pause;
-    boolean btnIsPressed=true;
+    boolean btnIsPressed=false;
     boolean isPaused;
 
     @Override
