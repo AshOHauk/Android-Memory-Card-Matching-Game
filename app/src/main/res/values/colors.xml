@@ -2,4 +2,15 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- Define common colors -->
+    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorAccent">#FF4081</color>
+
+    <!-- Define light mode specific colors -->
+    <color name="colorPrimaryLight">#2196F3</color>
+    <color name="colorAccentLight">#FF5722</color>
+
+    <!-- Define night mode specific colors -->
+    <color name="colorPrimaryNight">#673AB7</color>
+    <color name="colorAccentNight">#CDDC39</color>
 </resources>

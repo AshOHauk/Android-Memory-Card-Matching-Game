@@ -30,6 +30,7 @@ public class ImageDownloadTask implements Runnable{
         this.callback = callback;
         this.context = context;
     }
+
     //Main Logic for downloading images
     @Override
     public void run() {
@@ -112,6 +113,7 @@ public class ImageDownloadTask implements Runnable{
             callback.onImageDownloadError(this.newUrl,"Error: "+e);
         }
     }
+    
     //Resize bitmap while maintaining aspect ratio. To reduce memory usage if bitmap is especially large
     private Bitmap resizeBitmap(Bitmap source) {
         int desiredSize = (int) (100 * context.getResources().getDisplayMetrics().density);

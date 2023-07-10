@@ -4,4 +4,11 @@
         <!-- Customize your dark theme here. -->
         <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
     </style>
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight">
+        <!-- Customize night mode attributes -->
+        <item name="colorPrimary">@color/colorPrimaryNight</item>
+        <item name="colorAccent">@color/colorAccentNight</item>
+        <!-- Add more customized attributes for night mode -->
+    </style>
+
 </resources>

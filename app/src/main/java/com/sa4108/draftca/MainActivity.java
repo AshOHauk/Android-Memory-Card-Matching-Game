@@ -1,18 +1,23 @@
 package com.sa4108.draftca;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.LruCache;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ProgressBar;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -23,7 +28,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 
-public class MainActivity extends AppCompatActivity implements ImageDownloadCallback{
+public class MainActivity extends AppCompatActivity implements ImageDownloadCallback {
     private final Handler handler = new Handler();
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     //ExecutorService provides a simple way to launch new threads, and manage concurrent tasks
@@ -38,15 +43,27 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
     private final ArrayList<String> selectedImages = new ArrayList<>();
     private GridView gv;
 
-
     @Override
-    protected void onCreate(Bundle savedInstanceState){
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         AppAudioManager.startBackgroundAudio(this, R.raw.game_start);
         final EditText urlEditText = findViewById(R.id.urlEditText);
 
-        CustomListAdapter customListAdapter = new CustomListAdapter(this,imageList);
+        CustomListAdapter customListAdapter = new CustomListAdapter(this, imageList);
+
+        Switch switchButton = findViewById(R.id.switchButton);
+        switchButton.setChecked(AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES);
+
+        switchButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                int nightMode = isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO;
+                AppCompatDelegate.setDefaultNightMode(nightMode);
+                recreate();
+            }
+        });
+
         gv = findViewById(R.id.imageGridView);
         if(gv!=null) {
             gv.setAdapter(customListAdapter);
@@ -120,7 +137,6 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
         super.onResume();
         AppAudioManager.resumeBackgroundAudio();
     }
-
 
     private boolean toggleImageSelection(String image) {
         if (selectedImages.contains(image)) {
