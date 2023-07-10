@@ -23,6 +23,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustPan"
             android:exported="true">
             <intent-filter>
@@ -32,7 +33,16 @@
         </activity>
         <activity
             android:name=".MemoryGameActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustPan"
+            android:exported="false" />
+        <activity
+            android:name=".MemoryGameMultiActivity"
+            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustPan"
             android:exported="false" />
     </application>
 </manifest>
+
+<!--    android:screenOrientation="landscape"-->
+<!--    android:screenOrientation="portrait"-->

@@ -15,13 +15,22 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <Switch
+        android:id="@+id/modeSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Two-Player Mode"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        />
+
     <EditText
         android:id="@+id/urlEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="textUri"
         android:hint="Enter URL"
-        app:layout_constraintTop_toBottomOf="@+id/switchButton"
+        app:layout_constraintTop_toBottomOf="@+id/modeSwitch"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         />

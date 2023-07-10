@@ -3,6 +3,7 @@ package com.sa4108.draftca;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
@@ -35,6 +36,8 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
     //In this case, a single-thread executor is created, it processes one task at a time (FIFO)
     private final ArrayList<String> imageList = new ArrayList<>();
     //List of imageUrls scraped from website
+    private Switch modeSwitch;
+    private boolean isMultiplayer;
     private ProgressBar progressBar;
     private TextView progressText;
     private final Map<String, Future<?>> futuresMap = new ConcurrentHashMap<>();
@@ -47,6 +50,28 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //Initialize Multiplayer switch and store the value in SharedPreferences
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        isMultiplayer = sharedPref.getBoolean("isMultiplayer",false);
+        modeSwitch = findViewById(R.id.modeSwitch);
+        if (isMultiplayer)
+            modeSwitch.setChecked(true);
+        modeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                SharedPreferences.Editor editor = sharedPref.edit();
+                if (isChecked) {
+                    isMultiplayer=true;
+                } else {
+                    isMultiplayer=false;
+                }
+                editor.putBoolean("isMultiplayer",isMultiplayer);
+                editor.commit();
+            }
+        });
+
         AppAudioManager.startBackgroundAudio(this, R.raw.game_start);
         final EditText urlEditText = findViewById(R.id.urlEditText);
 
@@ -84,7 +109,13 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
                             imageCache.remove(url);
                         }
                     }
-                    Intent intent = new Intent(this, MemoryGameActivity.class);
+                    Intent intent;
+                    if(isMultiplayer){
+                        intent = new Intent(this, MemoryGameMultiActivity.class);
+                    }
+                    else{
+                        intent = new Intent(this, MemoryGameActivity.class);
+                    }
                     AppAudioManager.incrementActiveActivityCount();
                     startActivity(intent);
                     this.finish();
@@ -119,6 +150,8 @@ public class MainActivity extends AppCompatActivity implements ImageDownloadCall
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
         });
+
+
     }
     protected void onDestroy(){
         super.onDestroy();
