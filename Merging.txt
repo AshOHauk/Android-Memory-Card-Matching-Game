@@ -1,0 +1,16 @@
+Merging.txt
+
+(DONE) ----------------------------------------------------------------//run after merging each branch
+
+Merging- Katherine's branch 
+onpause-kath
+https://github.com/AshOHauk/draftAndroidCA/commit/ef3dd32882115e104100a6112dade6a4a3aea7d9
+	-memory activity.java
+	-xml
+	
+Merging- Thant's branch 
+tts 
+https://github.com/AshOHauk/draftAndroidCA/compare/MemoryGame...tts
+	-only .xml, minor java
+	-MainActivity.java
+	
