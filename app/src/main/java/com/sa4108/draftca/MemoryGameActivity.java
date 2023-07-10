@@ -37,6 +37,7 @@ public class MemoryGameActivity extends AppCompatActivity {
         final GridView gridView = findViewById(R.id.memoryGameGrid);
         adapter = new CardImageAdapter(this);
         gridView.setAdapter(adapter);
+        
         scoreDisplay = findViewById(R.id.score);
         timerDisplay = findViewById(R.id.timer);
         scoreDisplay.setText(String.format(Locale.UK, "%d /6",score));
