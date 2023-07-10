@@ -15,6 +15,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -78,29 +80,42 @@ public class ImageDownloadTask implements Runnable{
                 callback.onImageDownloadError(this.newUrl,"URL has no images. Please try a different URL");
                 return;
             }
-            for(String imageUrlString : imageList){
-                if (Thread.currentThread().isInterrupted()) {
-                    callback.onTaskInterrupted(this.newUrl);
-                    return;  // Thread has been interrupted, stop the task.
-                }
-                URL imageUrl = new URL(imageUrlString);
-                HttpURLConnection httpImgURLConnection = (HttpURLConnection) imageUrl.openConnection();
-                httpImgURLConnection.setDoInput(true);
-                httpImgURLConnection.setRequestProperty("User-Agent",
-                        "Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.2.28) Gecko/20120306 Firefox/3.6.28");
-                httpImgURLConnection.connect();
-                InputStream input = httpImgURLConnection.getInputStream();
-                Bitmap bitmap = BitmapFactory.decodeStream(input);
-                if(bitmap != null) {
-                    // Resize the bitmap if it was loaded
-                    bitmap = resizeBitmap(bitmap);
-                    imageCache.put(imageUrlString, bitmap);
-                }
-                input.close();
-                httpImgURLConnection.disconnect();
-                counter++;
-                callback.onEachImageDownloadComplete(counter,imageList.size());
+
+            //updated with Isabelle's merge
+            int numThreads = Math.min(imageList.size(), Runtime.getRuntime().availableProcessors());
+            ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
+
+            for (String imageUrlString : imageList) {
+                executorService.execute(() -> {
+                    try {
+                        URL imageUrl = new URL(imageUrlString);
+                        HttpURLConnection imgConnection = (HttpURLConnection) imageUrl.openConnection();
+                        imgConnection.setRequestProperty("User-Agent",
+                                "Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.2.28) Gecko/20120306 Firefox/3.6.28");
+                        InputStream imgInputStream = imgConnection.getInputStream();
+                        Bitmap bitmap = BitmapFactory.decodeStream(imgInputStream);
+                        imgInputStream.close();
+                        imgConnection.disconnect();
+
+                        if (bitmap != null) {
+                            // Resize the bitmap if it was loaded
+                            bitmap = resizeBitmap(bitmap);
+                            imageCache.put(imageUrlString, bitmap);
+                        }
+
+                        callback.onEachImageDownloadComplete(imageCache.size(), imageList.size());
+
+                        if (imageCache.size() == imageList.size()) {
+                            callback.onAllImageDownloadComplete(url.toString());
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        callback.onImageDownloadError(this.newUrl, "Error downloading image: " + e.getMessage());
+                    }
+                });
             }
+            executorService.shutdown();
+
             // Download complete, remove task from futuresMap
             callback.onAllImageDownloadComplete(url.toString());
         } catch(IOException eio) {
